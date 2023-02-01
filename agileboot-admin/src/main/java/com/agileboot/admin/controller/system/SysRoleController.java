@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 角色信息
  *
- * @author ruoyi
+ * @author valarchie
  */
 @RestController
 @RequestMapping("/system/role")
@@ -155,16 +155,6 @@ public class SysRoleController extends BaseController {
         return ResponseDTO.ok(page);
     }
 
-    /**
-     * 取消授权用户
-     */
-    @PreAuthorize("@permission.has('system:role:edit')")
-    @AccessLog(title = "角色管理", businessType = BusinessTypeEnum.GRANT)
-    @DeleteMapping("/{roleId}/user/grant")
-    public ResponseDTO<?> deleteRoleOfUser(@PathVariable("roleId")Long roleId, @RequestBody Long userId) {
-        roleApplicationService.deleteRoleOfUser(userId);
-        return ResponseDTO.ok();
-    }
 
     /**
      * 批量取消授权用户

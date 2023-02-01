@@ -20,7 +20,6 @@ import com.agileboot.infrastructure.web.service.TokenService;
 import com.agileboot.infrastructure.web.service.UserDetailsServiceImpl;
 import com.agileboot.orm.system.entity.SysRoleEntity;
 import com.agileboot.orm.system.entity.SysUserEntity;
-import com.agileboot.orm.system.service.ISysRoleMenuService;
 import com.agileboot.orm.system.service.ISysRoleService;
 import com.agileboot.orm.system.service.ISysUserService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -39,10 +38,13 @@ import org.springframework.stereotype.Service;
 public class RoleApplicationService {
 
     @NonNull
-    private ISysRoleService roleService;
+    private RoleModelFactory roleModelFactory;
 
     @NonNull
-    private ISysRoleMenuService roleMenuService;
+    private UserModelFactory userModelFactory;
+
+    @NonNull
+    private ISysRoleService roleService;
 
     @NonNull
     private ISysUserService userService;
@@ -53,93 +55,86 @@ public class RoleApplicationService {
     @NonNull
     private UserDetailsServiceImpl userDetailsService;
 
-    public PageDTO getRoleList(RoleQuery query) {
+    public PageDTO<RoleDTO> getRoleList(RoleQuery query) {
         Page<SysRoleEntity> page = roleService.page(query.toPage(), query.toQueryWrapper());
         List<RoleDTO> records = page.getRecords().stream().map(RoleDTO::new).collect(Collectors.toList());
-        return new PageDTO(records, page.getTotal());
+        return new PageDTO<>(records, page.getTotal());
     }
 
     public RoleDTO getRoleInfo(Long roleId) {
-        SysRoleEntity byId = RoleModelFactory.loadFromDb(roleId, roleService, roleMenuService);
+        SysRoleEntity byId = roleService.getById(roleId);
         return new RoleDTO(byId);
     }
 
 
     public void addRole(AddRoleCommand addCommand) {
-        RoleModel roleModel = RoleModelFactory.loadFromAddCommand(addCommand, new RoleModel());
+        RoleModel roleModel = roleModelFactory.create();
+        roleModel.loadAddCommand(addCommand);
 
-        roleModel.checkRoleNameUnique(roleService);
-        roleModel.checkRoleKeyUnique(roleService);
+        roleModel.checkRoleNameUnique();
+        roleModel.checkRoleKeyUnique();
 
-        roleModel.insert(roleMenuService);
+        roleModel.insert();
     }
 
     public void deleteRoleByBulk(List<Long> roleIds) {
         if (roleIds != null) {
             for (Long roleId : roleIds) {
-                deleteRole(roleId);
+                RoleModel roleModel = roleModelFactory.loadById(roleId);
+
+                roleModel.checkRoleCanBeDelete();
+
+                roleModel.deleteById();
             }
         }
     }
 
-    public void deleteRole(Long roleId) {
-        RoleModel roleModel = RoleModelFactory.loadFromDb(roleId, roleService, roleMenuService);
-
-        roleModel.checkRoleCanBeDelete(roleService);
-
-        roleModel.deleteById(roleMenuService);
-    }
-
 
     public void updateRole(UpdateRoleCommand updateCommand, LoginUser loginUser) {
-        RoleModel roleModel = RoleModelFactory.loadFromDb(updateCommand.getRoleId(), roleService, roleMenuService);
-        roleModel.loadFromUpdateCommand(updateCommand);
+        RoleModel roleModel = roleModelFactory.loadById(updateCommand.getRoleId());
+        roleModel.loadUpdateCommand(updateCommand);
 
-        roleModel.checkRoleKeyUnique(roleService);
-        roleModel.checkRoleNameUnique(roleService);
+        roleModel.checkRoleKeyUnique();
+        roleModel.checkRoleNameUnique();
 
-        roleModel.updateById(roleMenuService);
+        roleModel.updateById();
 
         if (loginUser.isAdmin()) {
+            // TODO 如何实时刷新所有改动到的user的权限
             loginUser.getRoleInfo().setMenuPermissions(userDetailsService.getMenuPermissions(loginUser.getUserId()));
             tokenService.setLoginUser(loginUser);
         }
     }
 
     public void updateStatus(UpdateStatusCommand command) {
-        RoleModel roleModel = RoleModelFactory.loadFromDb(command.getRoleId(), roleService, roleMenuService);
+        RoleModel roleModel = roleModelFactory.loadById(command.getRoleId());
+
         roleModel.setStatus(command.getStatus());
+
         roleModel.updateById();
     }
 
     public void updateDataScope(UpdateDataScopeCommand command) {
-        RoleModel roleModel = RoleModelFactory.loadFromDb(command.getRoleId(), roleService, roleMenuService);
+        RoleModel roleModel = roleModelFactory.loadById(command.getRoleId());
+
         roleModel.setDeptIds(command.getDeptIds());
         roleModel.setDataScope(command.getDataScope());
-
         roleModel.generateDeptIdSet();
+
         roleModel.updateById();
-
     }
 
 
-    public PageDTO getAllocatedUserList(AllocatedRoleQuery query) {
+    public PageDTO<UserDTO> getAllocatedUserList(AllocatedRoleQuery query) {
         Page<SysUserEntity> page = userService.getUserListByRole(query);
         List<UserDTO> dtoList = page.getRecords().stream().map(UserDTO::new).collect(Collectors.toList());
-        return new PageDTO(dtoList, page.getTotal());
+        return new PageDTO<>(dtoList, page.getTotal());
     }
 
-    public PageDTO getUnallocatedUserList(UnallocatedRoleQuery query) {
+    public PageDTO<UserDTO> getUnallocatedUserList(UnallocatedRoleQuery query) {
         Page<SysUserEntity> page = userService.getUserListByRole(query);
         List<UserDTO> dtoList = page.getRecords().stream().map(UserDTO::new).collect(Collectors.toList());
-        return new PageDTO(dtoList, page.getTotal());
-    }
-
-
-    public void deleteRoleOfUser(Long userId) {
-        UserModel user = UserModelFactory.loadFromDb(userId, userService);
-        user.setRoleId(null);
-        user.updateById();
+        return new PageDTO<>(dtoList, page.getTotal());
     }
 
     public void deleteRoleOfUserByBulk(List<Long> userIds) {
@@ -160,12 +155,11 @@ public class RoleApplicationService {
             return;
         }
 
-        RoleModel roleModel = RoleModelFactory.loadFromDb(roleId, roleService, roleMenuService);
-
+        RoleModel roleModel = roleModelFactory.loadById(roleId);
         roleModel.checkRoleAvailable();
 
         for (Long userId : userIds) {
-            UserModel user = UserModelFactory.loadFromDb(userId, userService);
+            UserModel user = userModelFactory.loadById(userId);
             user.setRoleId(roleId);
             user.updateById();
         }

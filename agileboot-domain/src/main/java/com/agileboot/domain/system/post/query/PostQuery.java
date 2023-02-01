@@ -1,8 +1,8 @@
 package com.agileboot.domain.system.post.query;
 
 import cn.hutool.core.util.StrUtil;
-import com.agileboot.orm.system.entity.SysPostEntity;
 import com.agileboot.orm.common.query.AbstractPageQuery;
+import com.agileboot.orm.system.entity.SysPostEntity;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,7 +17,6 @@ public class PostQuery extends AbstractPageQuery {
     private String postCode;
     private String postName;
     private Integer status;
-
 
     @Override
     public QueryWrapper toQueryWrapper() {

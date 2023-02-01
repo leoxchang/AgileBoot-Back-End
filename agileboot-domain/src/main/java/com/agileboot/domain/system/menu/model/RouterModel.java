@@ -7,9 +7,9 @@ import cn.hutool.http.HttpUtil;
 import com.agileboot.common.constant.Constants;
 import com.agileboot.domain.system.menu.dto.MetaDTO;
 import com.agileboot.domain.system.menu.dto.RouterDTO;
-import com.agileboot.orm.system.entity.SysMenuEntity;
 import com.agileboot.orm.common.enums.MenuComponentEnum;
 import com.agileboot.orm.common.enums.MenuTypeEnum;
+import com.agileboot.orm.system.entity.SysMenuEntity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -18,7 +18,6 @@ import java.util.Objects;
  * @author valarchie
  */
 public class RouterModel extends SysMenuEntity {
-
 
     public RouterDTO produceDirectoryRouterVO(List<RouterDTO> children) {
         RouterDTO router = produceDefaultRouterVO();

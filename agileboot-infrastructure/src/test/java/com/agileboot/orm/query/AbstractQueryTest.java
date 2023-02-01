@@ -59,5 +59,16 @@ class AbstractQueryTest {
 
 
 
+    @Test
+    void testConvertSortDirection() {
+        query.setIsAsc("ascending");
+        Assertions.assertTrue(query.convertSortDirection());
+
+        query.setIsAsc("descending");
+        Assertions.assertFalse(query.convertSortDirection());
+    }
+
+
+
 
 }

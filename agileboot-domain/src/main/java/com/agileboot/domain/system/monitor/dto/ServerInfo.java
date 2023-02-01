@@ -143,7 +143,12 @@ public class ServerInfo {
             diskInfo.setTotal(convertFileSize(total));
             diskInfo.setFree(convertFileSize(free));
             diskInfo.setUsed(convertFileSize(used));
-            diskInfo.setUsage(NumberUtil.div(used * 100, total, 4));
+            if (total != 0){
+                diskInfo.setUsage(NumberUtil.div(used * 100, total, 4));
+            } else {
+                //Windows下如果有光驱（可能是虚拟光驱），total为0，不能做除数
+                diskInfo.setUsage(0);
+            }
             diskInfos.add(diskInfo);
         }
     }

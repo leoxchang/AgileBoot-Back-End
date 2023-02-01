@@ -45,7 +45,7 @@ public class CodeGenerator {
     public static void main(String[] args) {
 
         CodeGenerator generator = CodeGenerator.builder()
-            .databaseUrl("jdbc:mysql://localhost:33067/agileboot4")
+            .databaseUrl("jdbc:mysql://localhost:33067/agileboot")
             .username("root")
             .password("12345")
             .author("valarchie")
@@ -73,7 +73,7 @@ public class CodeGenerator {
 //        templateConfig(generator);
         injectionConfig(generator);
         strategyConfig(generator);
-        // 使用Freemarker引擎模板，默认的是Velocity引擎模板
+        // 默认的是Velocity引擎模板
         generator.templateEngine(new VelocityTemplateEngine());
         generator.execute();
     }

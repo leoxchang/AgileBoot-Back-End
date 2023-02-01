@@ -15,8 +15,8 @@ import com.agileboot.domain.system.menu.model.MenuModelFactory;
 import com.agileboot.domain.system.menu.model.RouterModel;
 import com.agileboot.domain.system.menu.query.MenuQuery;
 import com.agileboot.infrastructure.web.domain.login.LoginUser;
-import com.agileboot.orm.system.entity.SysMenuEntity;
 import com.agileboot.orm.common.enums.MenuTypeEnum;
+import com.agileboot.orm.system.entity.SysMenuEntity;
 import com.agileboot.orm.system.service.ISysMenuService;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
+ * 菜单应用服务
  * @author valarchie
  */
 @Service
@@ -34,6 +35,9 @@ public class MenuApplicationService {
 
     @NonNull
     private ISysMenuService menuService;
+
+    @NonNull
+    private MenuModelFactory menuModelFactory;
 
 
     public List<MenuDTO> getMenuList(MenuQuery query) {
@@ -67,19 +71,20 @@ public class MenuApplicationService {
 
 
     public void addMenu(AddMenuCommand addCommand) {
-        MenuModel model = MenuModelFactory.loadFromAddCommand(addCommand, new MenuModel());
+        MenuModel model = menuModelFactory.create();
+        model.loadAddCommand(addCommand);
 
-        model.checkMenuNameUnique(menuService);
+        model.checkMenuNameUnique();
         model.checkExternalLink();
 
         model.insert();
     }
 
     public void updateMenu(UpdateMenuCommand updateCommand) {
-        MenuModel model = MenuModelFactory.loadFromDb(updateCommand.getMenuId(), menuService);
+        MenuModel model = menuModelFactory.loadById(updateCommand.getMenuId());
         model.loadUpdateCommand(updateCommand);
 
-        model.checkMenuNameUnique(menuService);
+        model.checkMenuNameUnique();
         model.checkExternalLink();
         model.checkParentIdConflict();
 
@@ -88,10 +93,10 @@ public class MenuApplicationService {
 
 
     public void remove(Long menuId) {
-        MenuModel menuModel = MenuModelFactory.loadFromDb(menuId, menuService);
+        MenuModel menuModel = menuModelFactory.loadById(menuId);
 
-        menuModel.checkHasChildMenus(menuService);
-        menuModel.checkMenuAlreadyAssignToRole(menuService);
+        menuModel.checkHasChildMenus();
+        menuModel.checkMenuAlreadyAssignToRole();
 
         menuModel.deleteById();
     }
@@ -136,6 +141,7 @@ public class MenuApplicationService {
             // 也可以使用 tree.setId(dept.getId());等一些默认值
             tree.setId(menu.getMenuId());
             tree.setParentId(menu.getParentId());
+            tree.setWeight(menu.getOrderNum());
             tree.putExtra("entity", menu);
         });
 

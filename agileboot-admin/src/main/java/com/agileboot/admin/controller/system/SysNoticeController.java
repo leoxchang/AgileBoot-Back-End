@@ -10,7 +10,9 @@ import com.agileboot.domain.system.notice.command.NoticeUpdateCommand;
 import com.agileboot.domain.system.notice.dto.NoticeDTO;
 import com.agileboot.domain.system.notice.query.NoticeQuery;
 import com.agileboot.infrastructure.annotations.AccessLog;
+import com.agileboot.infrastructure.annotations.Resubmit;
 import com.agileboot.orm.common.enums.BusinessTypeEnum;
+import com.baomidou.dynamic.datasource.annotation.DS;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
@@ -52,6 +54,18 @@ public class SysNoticeController extends BaseController {
     }
 
     /**
+     * 获取通知公告列表
+     * 从从库获取数据 例子 仅供参考
+     */
+    @DS("slave")
+    @PreAuthorize("@permission.has('system:notice:list')")
+    @GetMapping("/listFromSlave")
+    public ResponseDTO<PageDTO> listFromSlave(NoticeQuery query) {
+        PageDTO pageDTO = noticeApplicationService.getNoticeList(query);
+        return ResponseDTO.ok(pageDTO);
+    }
+
+    /**
      * 根据通知公告编号获取详细信息
      */
     @PreAuthorize("@permission.has('system:notice:query')")
@@ -63,6 +77,7 @@ public class SysNoticeController extends BaseController {
     /**
      * 新增通知公告
      */
+    @Resubmit(interval = 60)
     @PreAuthorize("@permission.has('system:notice:add')")
     @AccessLog(title = "通知公告", businessType = BusinessTypeEnum.ADD)
     @PostMapping

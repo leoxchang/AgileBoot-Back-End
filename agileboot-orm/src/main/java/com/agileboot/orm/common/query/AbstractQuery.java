@@ -25,8 +25,6 @@ public abstract class AbstractQuery {
     private static final String ASC = "ascending";
     private static final String DESC = "descending";
 
-
-
     /**
      * 比如原本的字段是  user_id 可以改成  u.user_id  以适应不同表的查询
      */
@@ -50,11 +48,16 @@ public abstract class AbstractQuery {
         return columnName;
     }
 
+    public void addColumnNameAlias(String alias, String columnName) {
+        filedOverride.put(columnName, alias + "." + columnName);
+    }
+
+
     public void addSortCondition(QueryWrapper<?> queryWrapper) {
         if(queryWrapper != null) {
-            queryWrapper.orderBy(StrUtil.isNotBlank(orderByColumn), convertSortDirection(),
+            boolean sortDirection = convertSortDirection();
+            queryWrapper.orderBy(StrUtil.isNotBlank(orderByColumn), sortDirection,
                 StrUtil.toUnderlineCase(orderByColumn));
-
         }
     }
 
@@ -71,7 +74,6 @@ public abstract class AbstractQuery {
     public boolean convertSortDirection() {
         boolean orderDirection = true;
         if (StrUtil.isNotEmpty(isAsc)) {
-            // 兼容前端排序类型 TODO 看看如何优化
             if (ASC.equals(isAsc)) {
                 orderDirection = true;
             } else if (DESC.equals(isAsc)) {
