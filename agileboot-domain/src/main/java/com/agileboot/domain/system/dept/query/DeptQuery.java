@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-public class DeptQuery extends AbstractQuery {
+public class DeptQuery extends AbstractQuery<SysDeptEntity> {
 
     private Long deptId;
 
@@ -24,21 +24,17 @@ public class DeptQuery extends AbstractQuery {
 
     private String deptName;
 
-    private boolean isExcludeCurrentDept;
-
     @Override
-    public QueryWrapper toQueryWrapper() {
-        QueryWrapper<SysDeptEntity> queryWrapper = new QueryWrapper<>();
+    public QueryWrapper<SysDeptEntity> toQueryWrapper() {
 
-        queryWrapper.eq(status != null, "status", status)
+        return new QueryWrapper<SysDeptEntity>()
+            .eq(status != null, "status", status)
             .eq(parentId != null, "parent_id", parentId)
-            .like(StrUtil.isNotEmpty(deptName), "dept_name", deptName)
-            .and(deptId != null && isExcludeCurrentDept, o ->
-                o.ne("dept_id", deptId)
-                    .or()
-                    .apply("FIND_IN_SET (dept_id , ancestors)")
-            );
-
-        return queryWrapper;
+            .like(StrUtil.isNotEmpty(deptName), "dept_name", deptName);
+//            .and(deptId != null && isExcludeCurrentDept, o ->
+//                o.ne("dept_id", deptId)
+//                    .or()
+//                    .apply("FIND_IN_SET (dept_id , ancestors)")
+//            );
     }
 }

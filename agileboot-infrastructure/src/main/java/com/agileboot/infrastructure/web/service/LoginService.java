@@ -16,33 +16,17 @@ import com.agileboot.common.exception.ApiException;
 import com.agileboot.common.exception.error.ErrorCode;
 import com.agileboot.common.utils.ServletHolderUtil;
 import com.agileboot.common.utils.i18n.MessageUtils;
-import com.agileboot.infrastructure.cache.guava.GuavaCacheService;
-import com.agileboot.infrastructure.cache.redis.RedisCacheService;
-import com.agileboot.infrastructure.security.AuthenticationUtils;
+import com.agileboot.infrastructure.cache.CacheCenter;
 import com.agileboot.infrastructure.thread.AsyncTaskFactory;
 import com.agileboot.infrastructure.thread.ThreadPoolManager;
 import com.agileboot.infrastructure.web.domain.login.CaptchaDTO;
+import com.agileboot.infrastructure.web.domain.login.LoginDTO;
 import com.agileboot.infrastructure.web.domain.login.LoginUser;
-import com.agileboot.infrastructure.web.domain.login.RoleInfo;
 import com.agileboot.orm.common.enums.ConfigKeyEnum;
 import com.agileboot.orm.common.enums.LoginStatusEnum;
-import com.agileboot.orm.common.enums.UserStatusEnum;
-import com.agileboot.orm.system.entity.SysMenuEntity;
-import com.agileboot.orm.system.entity.SysRoleEntity;
-import com.agileboot.orm.system.entity.SysRoleMenuEntity;
 import com.agileboot.orm.system.entity.SysUserEntity;
-import com.agileboot.orm.system.service.ISysMenuService;
-import com.agileboot.orm.system.service.ISysRoleMenuService;
-import com.agileboot.orm.system.service.ISysUserService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.google.code.kaptcha.Producer;
 import java.awt.image.BufferedImage;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -52,8 +36,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.FastByteArrayOutputStream;
 
@@ -71,12 +53,6 @@ public class LoginService {
     private TokenService tokenService;
 
     @NonNull
-    private RedisCacheService redisCacheService;
-
-    @NonNull
-    private GuavaCacheService guavaCacheService;
-
-    @NonNull
     private AuthenticationManager authenticationManager;
 
     @Resource(name = "captchaProducer")
@@ -88,44 +64,42 @@ public class LoginService {
     /**
      * 登录验证
      *
-     * @param username 用户名
-     * @param password 密码
-     * @param code 验证码
-     * @param uuid 唯一标识
+     * @param loginDTO 登录参数
      * @return 结果
      */
-    public String login(String username, String password, String code, String uuid) {
+    public String login(LoginDTO loginDTO) {
         // 验证码开关
         if (isCaptchaOn()) {
-            validateCaptcha(username, code, uuid);
+            validateCaptcha(loginDTO.getUsername(), loginDTO.getCode(), loginDTO.getUuid());
         }
         // 用户验证
         Authentication authentication;
         try {
 
             byte[] decryptBytes = SecureUtil.rsa(AgileBootConfig.getRsaPrivateKey(), null)
-                .decrypt(Base64.decode(password), KeyType.PrivateKey);
+                .decrypt(Base64.decode(loginDTO.getPassword()), KeyType.PrivateKey);
 
             String decryptPassword = StrUtil.str(decryptBytes, CharsetUtil.CHARSET_UTF_8);
 
             // 该方法会去调用UserDetailsServiceImpl.loadUserByUsername
             authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, decryptPassword));
+                new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), decryptPassword));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (Exception e) {
             if (e instanceof BadCredentialsException) {
-                ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(username, LoginStatusEnum.LOGIN_FAIL,
+                ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(loginDTO.getUsername(), LoginStatusEnum.LOGIN_FAIL,
                     MessageUtils.message("user.password.not.match")));
                 throw new ApiException(ErrorCode.Business.LOGIN_WRONG_USER_PASSWORD);
             } else {
-                ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(username, LoginStatusEnum.LOGIN_FAIL, e.getMessage()));
+                ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(loginDTO.getUsername(), LoginStatusEnum.LOGIN_FAIL, e.getMessage()));
                 throw new ApiException(e.getCause(), ErrorCode.Business.LOGIN_ERROR, e.getMessage());
             }
         }
-        ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(username, LoginStatusEnum.LOGIN_SUCCESS,
+        ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(loginDTO.getUsername(), LoginStatusEnum.LOGIN_SUCCESS,
             LoginStatusEnum.LOGIN_SUCCESS.description()));
         LoginUser loginUser = (LoginUser) authentication.getPrincipal();
-        recordLoginInfo(loginUser.getEntity());
+        SysUserEntity userEntity = CacheCenter.userCache.getObjectById(loginUser.getUserId());
+        recordLoginInfo(userEntity);
         // 生成token
         return tokenService.createToken(loginUser);
     }
@@ -166,7 +140,7 @@ public class LoginService {
             // 保存验证码信息
             String uuid = IdUtil.simpleUUID();
 
-            redisCacheService.captchaCache.set(uuid, answer);
+            CacheCenter.captchaCache.set(uuid, answer);
             // 转换流信息写出
             FastByteArrayOutputStream os = new FastByteArrayOutputStream();
             ImgUtil.writeJpg(image, os);
@@ -188,8 +162,8 @@ public class LoginService {
      * @param uuid 唯一标识
      */
     public void validateCaptcha(String username, String code, String uuid) {
-        String captcha = redisCacheService.captchaCache.getObjectById(uuid);
-        redisCacheService.captchaCache.delete(uuid);
+        String captcha = CacheCenter.captchaCache.getObjectById(uuid);
+        CacheCenter.captchaCache.delete(uuid);
         if (captcha == null) {
             ThreadPoolManager.execute(AsyncTaskFactory.loginInfoTask(username, LoginStatusEnum.LOGIN_FAIL,
                 ErrorCode.Business.LOGIN_CAPTCHA_CODE_EXPIRE.message()));
@@ -213,7 +187,7 @@ public class LoginService {
     }
 
     private boolean isCaptchaOn() {
-        return Convert.toBool(guavaCacheService.configCache.get(ConfigKeyEnum.CAPTCHA.getValue()));
+        return Convert.toBool(CacheCenter.configCache.get(ConfigKeyEnum.CAPTCHA.getValue()));
     }
 
 }

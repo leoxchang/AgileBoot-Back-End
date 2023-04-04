@@ -34,7 +34,7 @@ public class AgileBootConfig {
     /**
      * 实例演示开关
      */
-    private boolean demoEnabled;
+    private static boolean demoEnabled;
 
     /**
      * 上传路径
@@ -56,12 +56,22 @@ public class AgileBootConfig {
      */
     private static String rsaPrivateKey;
 
+    private static String apiDocsPathPrefix;
+
     public static String getFileBaseDir() {
         return fileBaseDir;
     }
 
     public void setFileBaseDir(String fileBaseDir) {
         AgileBootConfig.fileBaseDir = fileBaseDir  + File.separator + Constants.RESOURCE_PREFIX;
+    }
+
+    public static String getApiDocsPathPrefix() {
+        return apiDocsPathPrefix;
+    }
+
+    public void setApiDocsPathPrefix(String apiDocsPathPrefix) {
+        AgileBootConfig.apiDocsPathPrefix = apiDocsPathPrefix;
     }
 
     public static boolean isAddressEnabled() {
@@ -86,6 +96,14 @@ public class AgileBootConfig {
 
     public void setRsaPrivateKey(String rsaPrivateKey) {
         AgileBootConfig.rsaPrivateKey = rsaPrivateKey;
+    }
+
+    public static boolean isDemoEnabled() {
+        return demoEnabled;
+    }
+
+    public void setDemoEnabled(boolean demoEnabled) {
+        AgileBootConfig.demoEnabled = demoEnabled;
     }
 
 }

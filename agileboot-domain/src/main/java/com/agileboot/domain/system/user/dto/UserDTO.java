@@ -1,12 +1,11 @@
 package com.agileboot.domain.system.user.dto;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.extra.spring.SpringUtil;
 import com.agileboot.common.annotation.ExcelColumn;
 import com.agileboot.common.annotation.ExcelSheet;
 import com.agileboot.infrastructure.cache.CacheCenter;
-import com.agileboot.infrastructure.cache.guava.GuavaCacheService;
 import com.agileboot.orm.system.entity.SysDeptEntity;
+import com.agileboot.orm.system.entity.SysRoleEntity;
 import com.agileboot.orm.system.entity.SysUserEntity;
 import com.agileboot.orm.system.result.SearchUserDO;
 import java.util.Date;
@@ -33,12 +32,22 @@ public class UserDTO {
                 this.creatorName = creator.getUsername();
             }
 
+            if (entity.getRoleId() != null) {
+                SysRoleEntity roleEntity = CacheCenter.roleCache.getObjectById(entity.getRoleId());
+                this.roleName = roleEntity != null ? roleEntity.getRoleName() : "";
+            }
+
         }
     }
 
     public UserDTO(SearchUserDO entity) {
         if (entity != null) {
             BeanUtil.copyProperties(entity, this);
+
+            if (entity.getRoleId() != null) {
+                SysRoleEntity roleEntity = CacheCenter.roleCache.getObjectById(entity.getRoleId());
+                this.roleName = roleEntity != null ? roleEntity.getRoleName() : "";
+            }
         }
     }
 
@@ -51,6 +60,9 @@ public class UserDTO {
 
     @ExcelColumn(name = "角色ID")
     private Long roleId;
+
+    @ExcelColumn(name = "角色名称")
+    private String roleName;
 
     @ExcelColumn(name = "部门ID")
     private Long deptId;
@@ -74,13 +86,13 @@ public class UserDTO {
     private String phoneNumber;
 
     @ExcelColumn(name = "性别")
-    private String sex;
+    private Integer sex;
 
     @ExcelColumn(name = "用户头像")
     private String avatar;
 
     @ExcelColumn(name = "状态")
-    private String status;
+    private Integer status;
 
     @ExcelColumn(name = "IP")
     private String loginIp;

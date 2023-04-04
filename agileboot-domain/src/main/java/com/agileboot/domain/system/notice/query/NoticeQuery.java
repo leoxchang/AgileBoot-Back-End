@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-public class NoticeQuery extends AbstractPageQuery {
+public class NoticeQuery extends AbstractPageQuery<SysNoticeEntity> {
 
     private String noticeType;
 
@@ -23,15 +23,14 @@ public class NoticeQuery extends AbstractPageQuery {
     private String creatorName;
 
 
-    @SuppressWarnings("rawtypes")
     @Override
-    public QueryWrapper toQueryWrapper() {
-        QueryWrapper<SysNoticeEntity> sysNoticeWrapper = new QueryWrapper<>();
-        sysNoticeWrapper.like(StrUtil.isNotEmpty(noticeTitle), "notice_title", noticeTitle)
+    public QueryWrapper<SysNoticeEntity> toQueryWrapper() {
+        QueryWrapper<SysNoticeEntity> queryWrapper = new QueryWrapper<SysNoticeEntity>()
+            .like(StrUtil.isNotEmpty(noticeTitle), "notice_title", noticeTitle)
             .eq(noticeType != null, "notice_type", noticeType)
             .eq("n.deleted", 0)
             .like(StrUtil.isNotEmpty(creatorName), "u.username", creatorName);
 
-        return sysNoticeWrapper;
+        return queryWrapper;
     }
 }

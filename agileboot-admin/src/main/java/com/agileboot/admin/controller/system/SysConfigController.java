@@ -8,7 +8,7 @@ import com.agileboot.domain.system.config.command.ConfigUpdateCommand;
 import com.agileboot.domain.system.config.dto.ConfigDTO;
 import com.agileboot.domain.system.config.query.ConfigQuery;
 import com.agileboot.infrastructure.annotations.AccessLog;
-import com.agileboot.infrastructure.cache.guava.GuavaCacheService;
+import com.agileboot.infrastructure.cache.CacheCenter;
 import com.agileboot.infrastructure.cache.map.MapCache;
 import com.agileboot.orm.common.enums.BusinessTypeEnum;
 import com.agileboot.orm.common.result.DictionaryData;
@@ -43,9 +43,6 @@ public class SysConfigController extends BaseController {
 
     @NonNull
     private ConfigApplicationService configApplicationService;
-
-    @NonNull
-    private GuavaCacheService guavaCacheService;
 
     /**
      * 获取参数配置列表
@@ -90,7 +87,7 @@ public class SysConfigController extends BaseController {
     @AccessLog(title = "参数管理", businessType = BusinessTypeEnum.MODIFY)
     @Operation(summary = "配置修改", description = "配置修改")
     @PutMapping
-    public ResponseDTO<?> edit(@RequestBody ConfigUpdateCommand config) {
+    public ResponseDTO<Void> edit(@RequestBody ConfigUpdateCommand config) {
         configApplicationService.updateConfig(config);
         return ResponseDTO.ok();
     }
@@ -102,8 +99,8 @@ public class SysConfigController extends BaseController {
     @PreAuthorize("@permission.has('system:config:remove')")
     @AccessLog(title = "参数管理", businessType = BusinessTypeEnum.CLEAN)
     @DeleteMapping("/refreshCache")
-    public ResponseDTO<?> refreshCache() {
-        guavaCacheService.configCache.invalidateAll();
+    public ResponseDTO<Void> refreshCache() {
+        CacheCenter.configCache.invalidateAll();
         return ResponseDTO.ok();
     }
 }

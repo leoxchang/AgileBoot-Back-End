@@ -12,18 +12,17 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class PostQuery extends AbstractPageQuery {
+public class PostQuery extends AbstractPageQuery<SysPostEntity> {
 
     private String postCode;
     private String postName;
     private Integer status;
 
     @Override
-    public QueryWrapper toQueryWrapper() {
-        QueryWrapper<SysPostEntity> queryWrapper = new QueryWrapper<>();
-
-        queryWrapper.eq(status != null, "status", status)
-            .eq(postCode != null, "post_code", postCode)
+    public QueryWrapper<SysPostEntity> toQueryWrapper() {
+        QueryWrapper<SysPostEntity> queryWrapper = new QueryWrapper<SysPostEntity>()
+            .eq(status != null, "status", status)
+            .eq(StrUtil.isNotEmpty(postCode), "post_code", postCode)
             .like(StrUtil.isNotEmpty(postName), "post_name", postName);
 
         addSortCondition(queryWrapper);

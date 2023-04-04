@@ -5,8 +5,6 @@ import com.agileboot.common.core.page.PageDTO;
 import com.agileboot.domain.common.command.BulkOperationCommand;
 import com.agileboot.domain.system.post.dto.PostDTO;
 import com.agileboot.domain.system.role.dto.RoleDTO;
-import com.agileboot.domain.system.role.model.RoleModel;
-import com.agileboot.domain.system.role.model.RoleModelFactory;
 import com.agileboot.domain.system.user.command.AddUserCommand;
 import com.agileboot.domain.system.user.command.ChangeStatusCommand;
 import com.agileboot.domain.system.user.command.ResetPasswordCommand;
@@ -16,7 +14,6 @@ import com.agileboot.domain.system.user.command.UpdateUserCommand;
 import com.agileboot.domain.system.user.command.UpdateUserPasswordCommand;
 import com.agileboot.domain.system.user.dto.UserDTO;
 import com.agileboot.domain.system.user.dto.UserDetailDTO;
-import com.agileboot.domain.system.user.dto.UserInfoDTO;
 import com.agileboot.domain.system.user.dto.UserProfileDTO;
 import com.agileboot.domain.system.user.model.UserModel;
 import com.agileboot.domain.system.user.model.UserModelFactory;
@@ -29,10 +26,9 @@ import com.agileboot.orm.system.entity.SysRoleEntity;
 import com.agileboot.orm.system.entity.SysUserEntity;
 import com.agileboot.orm.system.result.SearchUserDO;
 import com.agileboot.orm.system.service.ISysPostService;
-import com.agileboot.orm.system.service.ISysRoleMenuService;
 import com.agileboot.orm.system.service.ISysRoleService;
 import com.agileboot.orm.system.service.ISysUserService;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,12 +58,8 @@ public class UserApplicationService {
     @NonNull
     private TokenService tokenService;
 
-    @NonNull
-    private RoleModelFactory roleModelFactory;
 
-
-
-    public PageDTO<UserDTO> getUserList(SearchUserQuery query) {
+    public PageDTO<UserDTO> getUserList(SearchUserQuery<SearchUserDO> query) {
         Page<SearchUserDO> userPage = userService.getUserList(query);
         List<UserDTO> userDTOList = userPage.getRecords().stream().map(UserDTO::new).collect(Collectors.toList());
         return new PageDTO<>(userDTOList, userPage.getTotal());
@@ -99,12 +91,12 @@ public class UserApplicationService {
         SysUserEntity userEntity = userService.getById(userId);
         UserDetailDTO detailDTO = new UserDetailDTO();
 
-        QueryWrapper<SysRoleEntity> roleQuery = new QueryWrapper<>();
-        roleQuery.orderByAsc("role_sort");
+        LambdaQueryWrapper<SysRoleEntity> roleQuery = new LambdaQueryWrapper<SysRoleEntity>()
+            .orderByAsc(SysRoleEntity::getRoleSort);
         List<RoleDTO> roleDtoList = roleService.list(roleQuery).stream().map(RoleDTO::new).collect(Collectors.toList());
         List<PostDTO> postDtoList = postService.list().stream().map(PostDTO::new).collect(Collectors.toList());
-        detailDTO.setRoles(roleDtoList);
-        detailDTO.setPosts(postDtoList);
+        detailDTO.setRoleOptions(roleDtoList);
+        detailDTO.setPostOptions(postDtoList);
 
         if (userEntity != null) {
             detailDTO.setUser(new UserDTO(userEntity));
@@ -121,6 +113,7 @@ public class UserApplicationService {
         model.checkUsernameIsUnique();
         model.checkPhoneNumberIsUnique();
         model.checkEmailIsUnique();
+        model.checkFieldRelatedEntityExist();
         model.resetPassword(command.getPassword());
 
         model.insert();
@@ -132,6 +125,7 @@ public class UserApplicationService {
 
         model.checkPhoneNumberIsUnique();
         model.checkEmailIsUnique();
+        model.checkFieldRelatedEntityExist();
         model.updateById();
 
         CacheCenter.userCache.delete(model.getUserId());
@@ -150,9 +144,6 @@ public class UserApplicationService {
         userModel.modifyPassword(command);
         userModel.updateById();
 
-        loginUser.setEntity(userModel);
-
-        tokenService.setLoginUser(loginUser);
         CacheCenter.userCache.delete(userModel.getUserId());
     }
 
@@ -183,16 +174,6 @@ public class UserApplicationService {
         tokenService.setLoginUser(loginUser);
 
         CacheCenter.userCache.delete(userModel.getUserId());
-    }
-
-    public UserInfoDTO getUserWithRole(Long userId) {
-        UserModel userModel = userModelFactory.loadById(userId);
-        RoleModel roleModel = roleModelFactory.loadById(userModel.getRoleId());
-
-        UserInfoDTO userInfoDTO = new UserInfoDTO();
-        userInfoDTO.setUser(new UserDTO(userModel));
-        userInfoDTO.setRole(new RoleDTO(roleModel));
-        return userInfoDTO;
     }
 
 

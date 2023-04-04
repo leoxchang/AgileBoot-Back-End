@@ -11,6 +11,8 @@ import com.agileboot.domain.system.operationlog.dto.OperationLogDTO;
 import com.agileboot.domain.system.operationlog.query.OperationLogQuery;
 import com.agileboot.infrastructure.annotations.AccessLog;
 import com.agileboot.orm.common.enums.BusinessTypeEnum;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * @author valarchie
  */
+@Tag(name = "操作日志API", description = "操作日志相关接口")
 @RestController
 @RequestMapping("/operationLog")
 @RequiredArgsConstructor
@@ -36,33 +39,37 @@ public class SysOperationLogController extends BaseController {
     @NonNull
     private OperationLogApplicationService operationLogApplicationService;
 
+    @Operation(summary = "操作日志列表")
     @PreAuthorize("@permission.has('monitor:operlog:list')")
     @GetMapping("/list")
-    public ResponseDTO<PageDTO> list(OperationLogQuery query) {
-        PageDTO pageDTO = operationLogApplicationService.getOperationLogList(query);
+    public ResponseDTO<PageDTO<OperationLogDTO>> list(OperationLogQuery query) {
+        PageDTO<OperationLogDTO> pageDTO = operationLogApplicationService.getOperationLogList(query);
         return ResponseDTO.ok(pageDTO);
     }
 
+    @Operation(summary = "操作日志导出")
     @AccessLog(title = "操作日志", businessType = BusinessTypeEnum.EXPORT)
     @PreAuthorize("@permission.has('monitor:operlog:export')")
     @PostMapping("/export")
     public void export(HttpServletResponse response, OperationLogQuery query) {
-        PageDTO pageDTO = operationLogApplicationService.getOperationLogList(query);
+        PageDTO<OperationLogDTO> pageDTO = operationLogApplicationService.getOperationLogList(query);
         CustomExcelUtil.writeToResponse(pageDTO.getRows(), OperationLogDTO.class, response);
     }
 
+    @Operation(summary = "删除操作日志")
     @AccessLog(title = "操作日志", businessType = BusinessTypeEnum.DELETE)
     @PreAuthorize("@permission.has('monitor:operlog:remove')")
     @DeleteMapping("/{operationIds}")
-    public ResponseDTO<?> remove(@PathVariable List<Long> operationIds) {
+    public ResponseDTO<Void> remove(@PathVariable List<Long> operationIds) {
         operationLogApplicationService.deleteOperationLog(new BulkOperationCommand<>(operationIds));
         return ResponseDTO.ok();
     }
 
+    @Operation(summary = "清空操作日志", description = "暂未支持")
     @AccessLog(title = "操作日志", businessType = BusinessTypeEnum.CLEAN)
     @PreAuthorize("@permission.has('monitor:operlog:remove')")
     @DeleteMapping("/clean")
-    public ResponseDTO<?> clean() {
+    public ResponseDTO<Void> clean() {
         return ResponseDTO.fail(ErrorCode.Business.UNSUPPORTED_OPERATION);
     }
 }
